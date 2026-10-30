@@ -121,10 +121,10 @@
     } finally { isBusy=false; draw(); }
   }
   function stageCompleted() {
-    if(assistedStage || autoplay) runEligible = false;
+    if(assistedStage || autoplay || mapOpen) runEligible = false;
     const record = toRecord();
     if(!record) {
-      if(settings.mode === 'evade') setNotice('이번 주행은 랭킹 제외(자동 탐험 또는 난이도 변경). 클래식 게임은 랭킹에 등록되지 않습니다.', 'warning');
+      if(settings.mode === 'evade') setNotice('이번 도전은 랭킹 제외(지도 보기·자동 탐험·난이도 변경). 클래식 게임은 랭킹에 등록되지 않습니다.', 'warning');
       return;
     }
     noteLocal(record);
@@ -135,6 +135,12 @@
   function newRun() {
     runEligible=true; bestEligible=null;
     setNotice('새 도전이 시작되었습니다. 직접 조작으로 클리어한 기록만 등록할 수 있습니다.');
+    draw();
+  }
+  function markMapAssisted() {
+    if(!runEligible) return;
+    runEligible = false;
+    setNotice('지도를 열어 이번 도전은 개인 최고 기록과 온라인 랭킹에서 제외됩니다. 지도를 닫아도 해제되지 않으며, 새 게임(N)부터 다시 기록할 수 있습니다.', 'warning');
     draw();
   }
   function markAssisted() {
@@ -154,7 +160,7 @@
   refreshButton.addEventListener('click',refresh);
   submitButton.addEventListener('click',submit);
   ['ratCount','rockCount','pursuerOn'].forEach(id=>$(id).addEventListener('change',invalidateDifficulty));
-  window.RetroLeaderboard = {onWin:stageCompleted,newRun,markAssisted,refresh,getState:()=>({runEligible,bestEligible,cloudAvailable,remoteEntries,localEntries})};
+  window.RetroLeaderboard = {onWin:stageCompleted,newRun,markAssisted,markMapAssisted,refresh,getState:()=>({runEligible,bestEligible,cloudAvailable,remoteEntries,localEntries})};
   draw();
   if(location.protocol==='http:'||location.protocol==='https:') void refresh();
   else setNotice('파일 실행 모드: 내 기록은 저장되지만, 전 세계 랭킹은 서버에서 실행해야 사용할 수 있습니다.','warning');

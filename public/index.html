@@ -68,7 +68,7 @@ kbd{font:inherit;background:#364351;border:1px solid #6b7c8d;padding:2px 4px;col
 <main class="shell">
   <header class="titlebar"><span>▧ 3D MAZE <span style="font-weight:400;opacity:.8">— ORIGINAL ASSETS · RAT ESCAPE v8</span></span><span class="dots"><i></i><i></i><i style="background:#e8afb1"></i></span></header>
   <div class="toolbar"><div class="tools">
-    <label class="mode-picker">게임 모드 <select id="gameMode" aria-label="게임 모드 선택"><option value="evade" selected>🐀 쥐 회피</option><option value="classic">클래식 (원작)</option></select></label> <button id="newGame">↻ 새 게임 (N)</button><button id="auto">자동 탐험 (O): OFF</button><button id="mapToggle">▦ 지도 (Tab)</button><button id="settingsToggle">⚙ 설정 (T)</button>
+    <label class="mode-picker">게임 모드 <select id="gameMode" aria-label="게임 모드 선택"><option value="evade" selected>🐀 쥐 회피</option><option value="classic">클래식 (원작)</option></select></label> <button id="newGame">↻ 새 게임 (N)</button><button id="auto">자동 탐험 (O): OFF</button><button id="mapToggle" title="지도를 열면 이번 도전은 개인·온라인 랭킹에서 제외됩니다">▦ 지도 (Tab)</button><button id="settingsToggle">⚙ 설정 (T)</button>
   </div><div class="stats"><span>스테이지 <b id="level">01</b></span><span>클리어 <b id="cleared">0</b></span><span>누적 <b id="totalTime">00:00</b></span><span>최고 <b id="bestTime">--:--</b></span><span>이번 <b id="timer">00:00</b></span><span>이동 <b id="steps">0</b></span><span>탐색 <b id="handStatus">우수법</b></span><span id="survivalStats"><span>체력 <b id="hearts" aria-label="체력 3">♥♥♥</b></span><span>점수 <b id="score">0</b></span><span>피격 <b id="hitCount">0</b></span></span></div></div>
 
   <section class="settings" id="settings" aria-label="원본 그래픽과 게임 규칙 설정">
@@ -95,20 +95,20 @@ kbd{font:inherit;background:#364351;border:1px solid #6b7c8d;padding:2px 4px;col
     <canvas id="map" class="map" width="460" height="460" aria-label="미로 전체 지도"></canvas>
     <div class="overlay" id="overlay"><section class="dialog"><div class="pixelicon">🧱</div><h1 id="dialogTitle">3D MAZE</h1>
        <p id="dialogBody">🐀 <strong>쥐 회피 모드</strong>: 좌·우수법 쥐 4마리와 추격 쥐 1마리(3·5단계부터 증가)를 피해 노란 웃는 얼굴까지 이동하세요. 추격 쥐는 같은 직선 통로 2칸 안에서 발견하고, 보이는 동안 4칸까지 추격합니다. 코너·벽 뒤로 숨으면 추적이 즉시 끊깁니다.<br/>체력 3칸 · 피격 후 1.5초 무적 · 마지막 안전 지점 복귀 · 무피격 추가점수.<br/><strong>↕ 화면 반전 시 쥐는 천장에 있어 충돌하지 않습니다.</strong> 정상 방향으로 복귀한 뒤 1.5초는 안전합니다.<br/>상단에서 <strong>클래식</strong>으로 바꾸면 원작처럼 충돌 효과 없이 탐험합니다.</p>
-       <p class="small">방향키·WASD 이동 ｜ Shift 달리기 ｜ Tab 지도<br/>O 우수법 자동 탐험 (회피 모드에서는 자동 탐험 점수 제외) ｜ T 설정</p>
+       <p class="small">방향키·WASD 이동 ｜ Shift 달리기 ｜ Tab 지도 (랭킹 제외)<br/>O 우수법 자동 탐험 (회피 모드에서는 자동 탐험 점수 제외) ｜ T 설정</p>
        <button class="primary" id="start">탐험 시작 ▶</button></section></div>
   </div>
   <div class="mobile-controls" aria-label="터치 조작"><div class="pad">
      <button data-control="forward" aria-label="앞으로">↑</button><button data-control="left" aria-label="왼쪽 회전">↶</button><button data-control="back" aria-label="뒤로">↓</button><button data-control="right" aria-label="오른쪽 회전">↷</button>
-  </div><div class="side"><button id="touchMap">▦ 지도</button><button id="touchAuto">자동 탐험</button><button data-control="sprint">달리기</button></div></div>
+  </div><div class="side"><button id="touchMap" title="지도를 열면 이번 도전은 개인·온라인 랭킹에서 제외됩니다">▦ 지도</button><button id="touchAuto">자동 탐험</button><button data-control="sprint">달리기</button></div></div>
   <section class="leaderboard" id="leaderboard" aria-label="스코어 랭킹">
     <div class="rank-heading"><div><h2>🏆 3D MAZE · LEADERBOARD</h2><p>점수 우선 · 동점 시 클리어 스테이지 · 다시 동점이면 기록 시간순</p></div><button id="rankRefresh" type="button">↻ 랭킹 새로고침</button></div>
     <div class="rank-controls"><label for="rankNickname">닉네임 <input type="text" id="rankNickname" autocomplete="nickname" maxlength="16" placeholder="2~16자" /></label><label><input type="checkbox" id="rankConsent" /> 클리어 시 온라인 기록 제출 동의</label><button id="rankSubmit" type="button">내 최고 기록 등록</button></div>
     <p id="rankNotice" role="status">로컬 기록을 준비하고 있습니다.</p>
     <div class="rank-grid"><div class="rank-card"><h3>🌐 온라인 Top 20</h3><table class="rank-table"><thead><tr><th>#</th><th>플레이어</th><th>점수</th><th>스테이지</th><th>시간</th></tr></thead><tbody id="rankOnlineRows"></tbody></table></div><div class="rank-card"><h3>💾 이 브라우저 최고 기록</h3><table class="rank-table"><thead><tr><th>#</th><th>점수</th><th>스테이지</th><th>시간</th></tr></thead><tbody id="rankLocalRows"></tbody></table></div></div>
-    <p class="rank-privacy">자동 탐험·클래식·난이도 완화 기록은 온라인 랭킹에서 제외됩니다. 공용 랭킹은 Cloudflare D1 서버 연결 시에만 작동하며, 제출을 선택하면 닉네임·점수·도달 스테이지·클리어 시간·익명 브라우저 ID가 저장됩니다. 현재 랭킹은 비공식 기록이며 서버 검증 대회용이 아닙니다.</p>
+    <p class="rank-privacy">지도 보기(Tab·지도 버튼)·자동 탐험·클래식·난이도 완화 기록은 개인 최고 기록과 온라인 랭킹에 등록되지 않습니다. 지도를 한 번이라도 열면 해당 도전 전체가 랭킹에서 제외되며 새 게임(N)으로 초기화됩니다. 공용 랭킹은 Cloudflare D1 서버 연결 시에만 작동하며, 제출을 선택하면 닉네임·점수·도달 스테이지·클리어 시간·익명 브라우저 ID가 저장됩니다. 현재 랭킹은 비공식 기록이며 서버 검증 대회용이 아닙니다.</p>
   </section>
-  <footer class="bottom"><div class="help"><span><kbd>↑</kbd><kbd>↓</kbd> 전진/후진</span><span><kbd>←</kbd><kbd>→</kbd> 회전</span><span><kbd>W A S D</kbd> 이동</span><span><kbd>Shift</kbd> 달리기</span><span><kbd>Tab</kbd> 지도</span><span><kbd>O</kbd> 자동 우수법</span><span><kbd>T</kbd> 설정</span></div><span class="status" id="status">쥐 회피 모드: 추격 1 + 순찰 4 · 원본 리소스 12종 · 오프라인</span></footer>
+  <footer class="bottom"><div class="help"><span><kbd>↑</kbd><kbd>↓</kbd> 전진/후진</span><span><kbd>←</kbd><kbd>→</kbd> 회전</span><span><kbd>W A S D</kbd> 이동</span><span><kbd>Shift</kbd> 달리기</span><span><kbd>Tab</kbd> 지도(랭킹 제외)</span><span><kbd>O</kbd> 자동 우수법</span><span><kbd>T</kbd> 설정</span></div><span class="status" id="status">쥐 회피 모드: 추격 1 + 순찰 4 · 원본 리소스 12종 · 오프라인</span></footer>
 </main>
 <script>
 const ORIGINAL_IMAGES={
@@ -584,6 +584,7 @@ function updateUI(){
  document.getElementById('handStatus').style.color=upsideDown?'#ffc28a':'#9ee9ac';
 }
 function newGame(){
+ mapOpen=false; // A fresh maze starts hidden and may qualify for ranking.
  level=1;cleared=0;totalTime=0;bestTime=Infinity;score=0;totalHits=0;deaths=0;
  generateMaze();
  const msg=settings.mode==='evade'
@@ -594,7 +595,12 @@ function newGame(){
  updateUI();
  window.RetroLeaderboard?.newRun();
 }
-function toggleMap(){mapOpen=!mapOpen;updateUI();drawMap();}
+function toggleMap(){
+ // A revealed maze is a navigational assist, even if closed again before clearing.
+ mapOpen=!mapOpen;
+ if(mapOpen)window.RetroLeaderboard?.markMapAssisted();
+ updateUI();drawMap();
+}
 function advance(dt){
  if(stopped)return;
  if(stagePhase==='intro'){
