@@ -12,7 +12,9 @@
   const KEYS = {
     player: 'retro3dmaze.player.v1',
     nickname: 'retro3dmaze.nickname.v1',
-    local: 'retro3dmaze.local.v1'
+    local: 'retro3dmaze.local.v1',
+    pending: 'retro3dmaze.pending.mapfree.v1',
+    consent: 'retro3dmaze.consent.v1'
   };
   const safeGet = key => { try { return localStorage.getItem(key); } catch { return null; } };
   const safeSet = (key, value) => { try { localStorage.setItem(key, value); } catch {} };
@@ -31,10 +33,25 @@
   let localEntries = [];
   try { const parsed = JSON.parse(saved || '[]'); if (Array.isArray(parsed)) localEntries = parsed.slice(0, 30); } catch {}
   let runEligible = true;
+  // Restore only records created under the map/auto-assist exclusion rules.
+  // Older local scores are still shown, but cannot be retrospectively certified as unassisted.
   let bestEligible = null;
+  try {
+    const saved = JSON.parse(safeGet(KEYS.pending) || 'null');
+    if(saved && saved.eligibility === 'mapfree-v1' && saved.playerId === playerId &&
+       saved.version === 'v8' && Number.isSafeInteger(saved.score) &&
+       Number.isSafeInteger(saved.stage) && Number.isSafeInteger(saved.seconds) &&
+       saved.stage >= 1 && saved.stage <= 999 &&
+       saved.score >= saved.stage * 100 && saved.score <= saved.stage * 210 &&
+       saved.seconds >= saved.stage && saved.seconds <= 8640000) {
+      bestEligible = {playerId, nickname: '', score: saved.score, stage: saved.stage,
+        seconds: saved.seconds, version: 'v8', runId: playerId};
+    }
+  } catch {}
   let isBusy = false;
   let cloudAvailable = false;
   let remoteEntries = [];
+  let autoUploadPending = false;
 
   function setNotice(message, type = 'info') {
     notice.textContent = message;
@@ -82,7 +99,7 @@
     const options = {method, headers: {'Accept': 'application/json'}, cache: 'no-store'};
     if(payload) { options.headers['Content-Type']='application/json'; options.body=JSON.stringify(payload); }
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 7000);
+    const timeout = setTimeout(() => controller.abort(), 12000);
     options.signal = controller.signal;
     try {
       const response = await fetch('api/leaderboard', options);
@@ -92,18 +109,19 @@
       return data;
     } finally { clearTimeout(timeout); }
   }
-  async function refresh() {
+  async function refresh({quiet = false} = {}) {
     try {
       const data = await requestJson('GET');
       remoteEntries = Array.isArray(data.entries) ? data.entries.filter(e=>Number.isSafeInteger(e.score)&&Number.isSafeInteger(e.stage)).slice(0,20) : [];
       cloudAvailable = true;
-      setNotice('공용 랭킹 연결됨 · 점수순 / 동점이면 최고 스테이지순', 'success');
+      if(!quiet) setNotice('공용 랭킹 연결됨 · 점수순 / 동점이면 최고 스테이지순', 'success');
     } catch(err) {
       cloudAvailable = false;
       remoteEntries=[];
-      setNotice(`내 기록은 이 브라우저에 저장됩니다. ${err.message}`, 'warning');
+      if(!quiet) setNotice(`내 기록은 이 브라우저에 저장됩니다. ${err.message}`, 'warning');
     }
     draw();
+    return cloudAvailable;
   }
   async function submit() {
     if(isBusy || !bestEligible) return;
@@ -114,11 +132,24 @@
     try {
       const response = await requestJson('POST', payload);
       cloudAvailable = true;
-      setNotice(response.improved ? '온라인 랭킹에 기록을 반영했습니다.' : '이미 더 높은 개인 기록이 등록되어 있습니다.', 'success');
-      await refresh();
+      const listUpdated = await refresh({quiet:true});
+      const listed = remoteEntries.some(e => e.nickname === nickname && e.score === payload.score && e.stage === payload.stage);
+      let message = response.improved
+        ? `온라인 저장 완료 · ${payload.score.toLocaleString('ko-KR')}점 / ${payload.stage}스테이지`
+        : '온라인에 이미 같거나 더 좋은 개인 기록이 등록되어 있습니다.';
+      if(!listUpdated) message += ' · 순위 목록 재조회에 실패했지만 서버는 저장 요청을 승인했습니다.';
+      else if(response.improved && !listed) message += ' · Top 20 밖의 기록은 목록에 표시되지 않을 수 있습니다.';
+      setNotice(message, 'success');
     } catch(err) {
       setNotice(`온라인 제출 실패: ${err.message}. 내 기록은 브라우저에 보존됩니다.`, 'warning');
-    } finally { isBusy=false; draw(); }
+    } finally {
+      isBusy=false;
+      draw();
+      if(autoUploadPending) {
+        autoUploadPending=false;
+        if(consentInput.checked && isValidName(sanitizeName(nicknameInput.value))) void submit();
+      }
+    }
   }
   function stageCompleted() {
     if(assistedStage || autoplay || mapOpen) runEligible = false;
@@ -128,13 +159,27 @@
       return;
     }
     noteLocal(record);
-    if(!bestEligible || rankCompare(record,bestEligible)<0) bestEligible=record;
+    const improved = !bestEligible || rankCompare(record,bestEligible)<0;
+    if(improved) {
+      bestEligible=record;
+      // Keep the last certified, unassisted high score available after reload or a network failure.
+      safeSet(KEYS.pending, JSON.stringify({...record, eligibility:'mapfree-v1'}));
+    }
     draw();
-    if(consentInput.checked) void submit();
+    const nickname = sanitizeName(nicknameInput.value);
+    if(consentInput.checked && isValidName(nickname) && improved) {
+      if(isBusy) autoUploadPending=true;
+      else void submit();
+    } else if(consentInput.checked && !isValidName(nickname)) {
+      setNotice(`로컬 저장 완료 · ${record.score}점 / ${record.stage}스테이지. 온라인 제출하려면 닉네임 2~16자를 입력하세요.`, 'warning');
+    } else {
+      setNotice(`로컬 저장 완료 · ${record.score}점 / ${record.stage}스테이지. 닉네임 입력 후 ‘내 최고 기록 등록’을 누르면 온라인에 저장됩니다.`, 'success');
+    }
   }
   function newRun() {
-    runEligible=true; bestEligible=null;
-    setNotice('새 도전이 시작되었습니다. 직접 조작으로 클리어한 기록만 등록할 수 있습니다.');
+    runEligible=true;
+    // Starting a new run must not discard an earlier certified personal best.
+    setNotice('새 도전이 시작되었습니다. 지도·자동 탐험 없이 클리어하면 기록됩니다. 이전 최고 기록도 등록할 수 있습니다.');
     draw();
   }
   function markMapAssisted() {
@@ -156,8 +201,15 @@
     draw();
   }
   nicknameInput.value=sanitizeName(safeGet(KEYS.nickname)||'');
-  nicknameInput.addEventListener('input',()=>{ safeSet(KEYS.nickname,sanitizeName(nicknameInput.value));draw(); });
-  refreshButton.addEventListener('click',refresh);
+  consentInput.checked=safeGet(KEYS.consent)==='yes';
+  consentInput.addEventListener('change',()=>safeSet(KEYS.consent,consentInput.checked?'yes':'no'));
+  nicknameInput.addEventListener('input',()=>{
+    safeSet(KEYS.nickname,sanitizeName(nicknameInput.value));
+    draw();
+    if(bestEligible && !isValidName(sanitizeName(nicknameInput.value)))
+      setNotice('닉네임은 2~16자여야 온라인 기록을 제출할 수 있습니다.', 'warning');
+  });
+  refreshButton.addEventListener('click',()=>void refresh());
   submitButton.addEventListener('click',submit);
   ['ratCount','rockCount','pursuerOn'].forEach(id=>$(id).addEventListener('change',invalidateDifficulty));
   window.RetroLeaderboard = {onWin:stageCompleted,newRun,markAssisted,markMapAssisted,refresh,getState:()=>({runEligible,bestEligible,cloudAvailable,remoteEntries,localEntries})};
