@@ -46,6 +46,12 @@ kbd{font:inherit;background:#364351;border:1px solid #6b7c8d;padding:2px 4px;col
 .pad{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,45px);gap:4px}.pad button{font-size:19px;font-weight:bold;padding:0;touch-action:none}
 .pad [data-control="forward"]{grid-column:2;grid-row:1}.pad [data-control="left"]{grid-column:1;grid-row:2}.pad [data-control="back"]{grid-column:2;grid-row:2}.pad [data-control="right"]{grid-column:3;grid-row:2}
 .mobile-controls .side{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.mobile-controls .side button{min-height:44px}
+/* iOS Safari: gamepad buttons are controls, never selectable or draggable text. */
+.mobile-controls,.mobile-controls button,.mobile-controls button *{
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  -webkit-user-drag:none;touch-action:none;-webkit-tap-highlight-color:transparent;
+}
+.pad button svg{display:block;margin:auto;width:26px;height:26px;pointer-events:none;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 @media(hover:none),(pointer:coarse){.mobile-controls{display:flex}.viewport{max-height:60svh}}
 @media(max-width:650px){body{padding:0;background:#1b222c;align-items:flex-start}.shell{border:0;box-shadow:none}.titlebar{font-size:12px}.toolbar{gap:8px}.stats{gap:9px;font-size:11px}.toolbar .tools button{font-size:11px;padding:6px 7px}.viewport{aspect-ratio:5/4;min-height:250px;max-height:65svh}.bottom{font-size:10px}.bottom .help{display:none}.dialog{padding:18px}.dialog .small{display:none}}
 
@@ -99,7 +105,7 @@ kbd{font:inherit;background:#364351;border:1px solid #6b7c8d;padding:2px 4px;col
        <button class="primary" id="start">탐험 시작 ▶</button></section></div>
   </div>
   <div class="mobile-controls" aria-label="터치 조작"><div class="pad">
-     <button data-control="forward" aria-label="앞으로">↑</button><button data-control="left" aria-label="왼쪽 회전">↶</button><button data-control="back" aria-label="뒤로">↓</button><button data-control="right" aria-label="오른쪽 회전">↷</button>
+     <button type="button" data-control="forward" aria-label="앞으로"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20V4m-6 6 6-6 6 6"/></svg></button><button type="button" data-control="left" aria-label="왼쪽 회전"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8V3m0 5h5M3 8a9 9 0 1 1 2.5 9"/></svg></button><button type="button" data-control="back" aria-label="뒤로"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4v16m-6-6 6 6 6-6"/></svg></button><button type="button" data-control="right" aria-label="오른쪽 회전"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 8V3m0 5h-5M21 8a9 9 0 1 0-2.5 9"/></svg></button>
   </div><div class="side"><button id="touchMap" title="지도를 열면 이번 도전은 개인·온라인 랭킹에서 제외됩니다">▦ 지도</button><button id="touchAuto">자동 탐험</button><button data-control="sprint">달리기</button></div></div>
   <section class="leaderboard" id="leaderboard" aria-label="스코어 랭킹">
     <div class="rank-heading"><div><h2>🏆 3D MAZE · LEADERBOARD</h2><p>점수 우선 · 동점 시 클리어 스테이지 · 다시 동점이면 기록 시간순</p></div><button id="rankRefresh" type="button">↻ 랭킹 새로고침</button></div>
@@ -943,6 +949,11 @@ function setupUI(){
   if(document.pointerLockElement===canvas&&!stopped){player.a=wrapAngle(player.a+e.movementX*.0025);
     if(autoplay){autoplay=false;updateUI();}}
  });
+ // Prevent Safari's long-press text selection/copy menu without cancelling held pointer controls.
+ const mobileControlArea=document.querySelector('.mobile-controls');
+ for(const eventName of ['contextmenu','selectstart','dragstart']){
+  mobileControlArea.addEventListener(eventName,e=>e.preventDefault());
+ }
  document.querySelectorAll('[data-control]').forEach(btn=>{
   const mapping={forward:'arrowup',back:'arrowdown',left:'arrowleft',right:'arrowright',sprint:'shift'};
   const key=mapping[btn.dataset.control];
