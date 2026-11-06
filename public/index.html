@@ -52,6 +52,14 @@ kbd{font:inherit;background:#364351;border:1px solid #6b7c8d;padding:2px 4px;col
   -webkit-user-drag:none;touch-action:none;-webkit-tap-highlight-color:transparent;
 }
 .pad button svg{display:block;margin:auto;width:26px;height:26px;pointer-events:none;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+/* A held mobile control temporarily locks page selection: iOS Safari may select adjacent text. */
+html.maze-gamepad-touch,html.maze-gamepad-touch body,html.maze-gamepad-touch body *{
+  -webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important;
+}
+.mobile-controls button,.mobile-controls button *{
+  -webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important;
+  -webkit-tap-highlight-color:transparent;
+}
 @media(hover:none),(pointer:coarse){.mobile-controls{display:flex}.viewport{max-height:60svh}}
 @media(max-width:650px){body{padding:0;background:#1b222c;align-items:flex-start}.shell{border:0;box-shadow:none}.titlebar{font-size:12px}.toolbar{gap:8px}.stats{gap:9px;font-size:11px}.toolbar .tools button{font-size:11px;padding:6px 7px}.viewport{aspect-ratio:5/4;min-height:250px;max-height:65svh}.bottom{font-size:10px}.bottom .help{display:none}.dialog{padding:18px}.dialog .small{display:none}}
 
@@ -949,16 +957,71 @@ function setupUI(){
   if(document.pointerLockElement===canvas&&!stopped){player.a=wrapAngle(player.a+e.movementX*.0025);
     if(autoplay){autoplay=false;updateUI();}}
  });
- // Prevent Safari's long-press text selection/copy menu without cancelling held pointer controls.
+ // iOS Safari can select text elsewhere on the page even when the button is nonselectable.
+ // Touch events own touch-held controls; mouse and pen keep pointer-capture handling.
  const mobileControlArea=document.querySelector('.mobile-controls');
- for(const eventName of ['contextmenu','selectstart','dragstart']){
-  mobileControlArea.addEventListener(eventName,e=>e.preventDefault());
+ const gamepadTouchIds=new Set();
+ let touchSelectionTimer=null;
+ const lockGamepadSelection=()=>{
+  clearTimeout(touchSelectionTimer);
+  document.documentElement.classList.add('maze-gamepad-touch');
+  const selection=window.getSelection?.();
+  if(selection && !selection.isCollapsed)selection.removeAllRanges();
+ };
+ const unlockGamepadSelection=()=>{
+  if(gamepadTouchIds.size)return;
+  clearTimeout(touchSelectionTimer);
+  touchSelectionTimer=setTimeout(()=>document.documentElement.classList.remove('maze-gamepad-touch'),400);
+ };
+ mobileControlArea.addEventListener('touchstart',e=>{
+  for(const touch of e.changedTouches)gamepadTouchIds.add(touch.identifier);
+  lockGamepadSelection();
+  // Must be a non-passive listener. Do not suppress taps on Map / Auto buttons.
+  if(e.target.closest('[data-control]')&&e.cancelable)e.preventDefault();
+ },{passive:false});
+ mobileControlArea.addEventListener('touchmove',e=>{
+  if(e.target.closest('[data-control]')&&e.cancelable)e.preventDefault();
+ },{passive:false});
+ for(const name of ['touchend','touchcancel'])mobileControlArea.addEventListener(name,e=>{
+  for(const touch of e.changedTouches)gamepadTouchIds.delete(touch.identifier);
+  unlockGamepadSelection();
+ },{passive:true});
+ for(const name of ['contextmenu','selectstart','dragstart']){
+  mobileControlArea.addEventListener(name,e=>e.preventDefault());
  }
+ document.addEventListener('selectstart',e=>{
+  if(document.documentElement.classList.contains('maze-gamepad-touch'))e.preventDefault();
+ },{capture:true});
+ document.addEventListener('selectionchange',()=>{
+  if(document.documentElement.classList.contains('maze-gamepad-touch')){
+   const selection=window.getSelection?.();
+   if(selection&&!selection.isCollapsed)selection.removeAllRanges();
+  }
+ });
+ const releaseAllTouchControls=()=>{
+  gamepadTouchIds.clear();keys.clear();unlockGamepadSelection();
+ };
+ window.addEventListener('blur',releaseAllTouchControls);
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAllTouchControls();});
  document.querySelectorAll('[data-control]').forEach(btn=>{
   const mapping={forward:'arrowup',back:'arrowdown',left:'arrowleft',right:'arrowright',sprint:'shift'};
   const key=mapping[btn.dataset.control];
-  btn.addEventListener('pointerdown',e=>{e.preventDefault();btn.setPointerCapture(e.pointerId);keys.add(key);if(stopped)begin();autoplay=false;});
-  for(const ev of ['pointerup','pointercancel','lostpointercapture'])btn.addEventListener(ev,()=>keys.delete(key));
+  // touchstart is the authoritative touch path, so pointercancel cannot drop a held key.
+  btn.addEventListener('touchstart',()=>{
+   keys.add(key);if(stopped)begin();autoplay=false;
+  },{passive:true});
+  for(const name of ['touchend','touchcancel'])btn.addEventListener(name,e=>{
+   if(e.targetTouches.length===0)keys.delete(key);
+  },{passive:true});
+  btn.addEventListener('pointerdown',e=>{
+   if(e.pointerType==='touch')return;
+   e.preventDefault();
+   try{btn.setPointerCapture(e.pointerId);}catch{}
+   keys.add(key);if(stopped)begin();autoplay=false;
+  });
+  for(const name of ['pointerup','pointercancel','lostpointercapture'])btn.addEventListener(name,e=>{
+   if(e.pointerType!=='touch')keys.delete(key);
+  });
  });
 }
 function getOpenCells(){const arr=[];for(let y=1;y<MH-1;y++)for(let x=1;x<MW-1;x++)if(openCell(x,y))arr.push([x,y]);return arr;}
