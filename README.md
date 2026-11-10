@@ -7,6 +7,7 @@ A playable browser tribute to the classic Windows 3D Maze screensaver, rebuilt u
 Open `public/index.html` in a browser for **offline play and local records**. To test the global scoreboard, use the Cloudflare Pages + D1 setup below.
 
 - Arrow keys / W S: forward/back and turn; A / D: strafe; Shift: sprint
+- Mobile touchscreen: hold and drag the **left half of the game canvas** for analog forward/backward movement and strafing; drag the **right half** to turn the camera. Two fingers work together. The original D-pad and sprint button remain available. Touch gestures count as manual play for rankings.
 - O: toggle wall-following autopilot; Tab or map buttons: map (**makes current run ineligible for rankings**); N: new game; T: settings
 - `Classic`: mice are harmless; `Rat Escape`: mice deal damage unless the scene has been flipped upside-down by a spinning solid
 - Chase rats see you only within two tiles in straight visible corridors, keep chasing until beyond four tiles, and lose you immediately when you duck around a corner
